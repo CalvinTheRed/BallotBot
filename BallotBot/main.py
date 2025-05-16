@@ -1,6 +1,7 @@
 import json
 import os
 import praw
+import threading
 import time
 from datetime import datetime, timezone
 
@@ -12,6 +13,8 @@ CUTOFF_DATE = datetime(2025, 4, 20, tzinfo=timezone.utc)
 ACTIVITY_DEPTH_CHECK = 100
 USER_CACHE_FILE = 'known_users.json'
 LOG_FILE = 'log.txt'
+
+user_data_lock = threading.Lock()
 
 # Initialize Reddit instance using praw.ini
 reddit = praw.Reddit(site_name=REDDIT_SITE_NAME)
@@ -68,39 +71,40 @@ def has_prior_activity(author):
         return False
 
     name = author.name.lower()
-    data = load_user_data()
+    with user_data_lock:
+        data = load_user_data()
 
-    # Check cache before making requests
-    if name in data['whitelist']:
-        return True
-    if name in data['blacklist']:
+        # Check cache before making requests
+        if name in data['whitelist']:
+            return True
+        if name in data['blacklist']:
+            return False
+
+        try:
+            # Check user comment history
+            for comment in author.comments.new(limit=ACTIVITY_DEPTH_CHECK):
+                comment_created_time = datetime.fromtimestamp(comment.created_utc).replace(tzinfo=timezone.utc)
+                if comment.subreddit.display_name.lower() == SUBREDDIT_NAME and comment_created_time < CUTOFF_DATE:
+                    data['whitelist'].append(name)
+                    save_user_data(data)
+                    log_action(f'User {name} added to whitelist via comment history.')
+                    return True
+            # Check user post history
+            for submission in author.submissions.new(limit=ACTIVITY_DEPTH_CHECK):
+                submission_created_time = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)
+                if submission.subreddit.display_name.lower() == SUBREDDIT_NAME and submission_created_time < CUTOFF_DATE:
+                    data['whitelist'].append(name)
+                    save_user_data(data)
+                    log_action(f'User {name} added to whitelist via post history.')
+                    return True
+        except Exception as e:
+            log_action(f'Error checking prior activity for {name}: {e}')
+
+        # Blacklist user if not active
+        data['blacklist'].append(name)
+        save_user_data(data)
+        log_action(f'User {name} added to blacklist.')
         return False
-
-    try:
-        # Check user comment history
-        for comment in author.comments.new(limit=ACTIVITY_DEPTH_CHECK):
-            comment_created_time = datetime.fromtimestamp(comment.created_utc).replace(tzinfo=timezone.utc)
-            if comment.subreddit.display_name.lower() == SUBREDDIT_NAME and comment_created_time < CUTOFF_DATE:
-                data['whitelist'].append(name)
-                save_user_data(data)
-                log_action(f'User {name} added to whitelist via comment history.')
-                return True
-        # Check user post history
-        for submission in author.submissions.new(limit=ACTIVITY_DEPTH_CHECK):
-            submission_created_time = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)
-            if submission.subreddit.display_name.lower() == SUBREDDIT_NAME and submission_created_time < CUTOFF_DATE:
-                data['whitelist'].append(name)
-                save_user_data(data)
-                log_action(f'User {name} added to whitelist via post history.')
-                return True
-    except Exception as e:
-        log_action(f'Error checking prior activity for {name}: {e}')
-
-    # Blacklist user if not active
-    data['blacklist'].append(name)
-    save_user_data(data)
-    log_action(f'User {name} added to blacklist.')
-    return False
 
 def monitor_comments(post):
     for comment in subreddit.stream.comments():
@@ -130,21 +134,43 @@ def monitor_comments(post):
                 else:
                     # Comments left by active accounts that are votes will be recorded
                     comment.mod.remove()
-                    data = load_user_data()
-                    data['votes'][username] = content
-                    save_user_data(data)
-                    log_action(f'Recorded vote by {username}: {content}')
-                    send_modmail(
-                        username,
-                        'Vote Recorded',
-                        f'Thanks for voting! Your response ({content}) has been recorded. You may change your response at any time before the vote ends by re-commenting with your new response.'
-                    )
+                    with user_data_lock:
+                        data = load_user_data()
+                        data['votes'][username] = content
+                        save_user_data(data)
+                        log_action(f'Recorded vote by {username}: {content}')
+                        send_modmail(
+                            username,
+                            'Vote Recorded',
+                            f'Thanks for voting! Your response ({content}) has been recorded. You may change your response at any time before the vote ends by re-commenting with your new response.'
+                        )
         except Exception as e:
             log_action(f'Encountered an error: {e}')
 
+def monitor_terminal():
+    while True:
+        try:
+            cmd = input().strip()
+            if cmd.startswith('whitelist '):
+                username = cmd.split(' ', 1)[1].strip().lower()
+                with user_data_lock:
+                    data = load_user_data()
+                    if username not in data['whitelist']:
+                        data['whitelist'].append(username)
+                        log_action(f'User {username} added to whitelist via terminal.')
+                    if username in data['blacklist']:
+                        data['blacklist'].remove(username)
+                        log_action(f'User {username} removed from blacklist.')
+                    save_user_data(data)
+        except Exception as e:
+            log_action(f'Error processing terminal command: {e}')
+
 def main():
-    post = get_latest_post_by_flair(FLAIR_TEXT)
-    monitor_comments(post)
+    threading.Thread(target=monitor_terminal, daemon=True).start()
+    #post = get_latest_post_by_flair(FLAIR_TEXT)
+    #monitor_comments(post)
+    while True:
+        pass
     
 if __name__ == '__main__':
     main()
