@@ -4,3 +4,4 @@ BallotBot/BallotBot.pyproj
 BallotBot/BallotBot.pyproj.user
 BallotBot/known_users.json
 BallotBot/log.txt
+BallotBot/praw.ini
