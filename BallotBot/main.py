@@ -2,7 +2,6 @@ import json
 import os
 import praw
 import threading
-import time
 from datetime import datetime, timezone
 
 REDDIT_SITE_NAME = 'ballot_bot'
@@ -20,7 +19,6 @@ user_data_lock = threading.Lock()
 reddit = praw.Reddit(site_name=REDDIT_SITE_NAME)
 subreddit = reddit.subreddit('dndhomebrew')
 
-# TESTED
 def load_user_data():
     if not os.path.exists(USER_CACHE_FILE):
         log_action('User cache file not found. Initializing new cache.')
@@ -32,7 +30,6 @@ def load_user_data():
         log_action(f'Error loading user cache: {e}')
         return {'whitelist': [], 'blacklist': [], 'votes': {}}
 
-# TESTED
 def save_user_data(data):
     try:
         with open(USER_CACHE_FILE, 'w') as f:
@@ -41,7 +38,6 @@ def save_user_data(data):
     except Exception as e:
         log_action(f'Error saving user cache: {e}')
 
-# TESTED
 def log_action(message):
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     formatted_message = f'[{timestamp}] {message}\n'
@@ -49,7 +45,6 @@ def log_action(message):
         f.write(formatted_message)
         print(formatted_message)
 
-# TESTED
 def send_modmail(recipient, subject, body):
     try:
         reddit.subreddit(SUBREDDIT_NAME).modmail.create(subject=subject, body=body, recipient=recipient)
@@ -57,15 +52,12 @@ def send_modmail(recipient, subject, body):
     except Exception as e:
         log_action(f'Failed to send modmail to {recipient}: {e}')
 
-# TESTED
 def get_latest_post_by_flair(flair):
     return next(subreddit.search(f'flair:"{flair}"', sort='new', limit=1), None)
 
-# TESTED
 def get_post_by_title(title):
     return next(subreddit.search(f'title:"{title}"', sort='new', limit=1), None)
 
-# TESTED
 def has_prior_activity(author):
     if not author:
         return False
@@ -167,10 +159,8 @@ def monitor_terminal():
 
 def main():
     threading.Thread(target=monitor_terminal, daemon=True).start()
-    #post = get_latest_post_by_flair(FLAIR_TEXT)
-    #monitor_comments(post)
-    while True:
-        pass
+    post = get_latest_post_by_flair(FLAIR_TEXT)
+    monitor_comments(post)
     
 if __name__ == '__main__':
     main()
