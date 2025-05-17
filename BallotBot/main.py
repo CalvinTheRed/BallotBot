@@ -34,7 +34,6 @@ def save_user_data(data):
     try:
         with open(USER_CACHE_FILE, 'w') as f:
             json.dump(data, f, indent=2)
-        log_action('User cache saved.')
     except Exception as e:
         log_action(f'Error saving user cache: {e}')
 
