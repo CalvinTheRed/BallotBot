@@ -139,11 +139,13 @@ def monitor_comments(post):
             log_action(f'Encountered an error: {e}')
 
 def monitor_terminal():
+    # Check terminal for commands
     while True:
         try:
-            cmd = input().strip()
+            cmd = input().strip().lower()
+            # whitelist <username>
             if cmd.startswith('whitelist '):
-                username = cmd.split(' ', 1)[1].strip().lower()
+                username = cmd.split(' ', 1)[1].strip()
                 with user_data_lock:
                     data = load_user_data()
                     if username not in data['whitelist']:
@@ -154,10 +156,14 @@ def monitor_terminal():
                         log_action(f'User {username} removed from blacklist.')
                     save_user_data(data)
                     send_modmail(
-                            username,
-                            'User added to whitelist',
-                            f'You have been added to the whitelist for the community vote! Thank you for your patience. Comment on the post again to cast your vote.'
-                        )
+                        username,
+                        'User added to whitelist',
+                        f'You have been added to the whitelist for the community vote! Thank you for your patience. Comment on the post again to cast your vote.'
+                    )
+            # exit
+            elif cmd == 'exit':
+                print('Closing script')
+                os._exit()
         except Exception as e:
             log_action(f'Error processing terminal command: {e}')
 
