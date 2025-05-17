@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 REDDIT_SITE_NAME = 'ballot_bot'
 SUBREDDIT_NAME = 'dndhomebrew'
 FLAIR_TEXT = 'official'
-VALID_VOTES = {'yes', 'no', 'indifferent'}
+VALID_VOTES = {'yes', 'no'}
 CUTOFF_DATE = datetime(2025, 4, 20, tzinfo=timezone.utc)
 ACTIVITY_DEPTH_CHECK = 100
 USER_CACHE_FILE = 'known_users.json'
@@ -121,7 +121,7 @@ def monitor_comments(post):
                     send_modmail(
                         username,
                         'Your Vote Was Removed',
-                        'Only "yes", "no", or "indifferent" are valid responses in this community vote.'
+                        'Only "yes" and "no" are valid responses in this community vote.'
                     )
                 else:
                     # Comments left by active accounts that are votes will be recorded
@@ -154,6 +154,11 @@ def monitor_terminal():
                         data['blacklist'].remove(username)
                         log_action(f'User {username} removed from blacklist.')
                     save_user_data(data)
+                    send_modmail(
+                            username,
+                            'User added to whitelist',
+                            f'You have been added to the whitelist for the community vote! Thank you for your patience. Comment on the post again to cast your vote.'
+                        )
         except Exception as e:
             log_action(f'Error processing terminal command: {e}')
 
