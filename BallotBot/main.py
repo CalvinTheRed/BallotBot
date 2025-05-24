@@ -46,7 +46,7 @@ def log_action(message):
 
 def send_modmail(recipient, subject, body):
     try:
-        reddit.subreddit(SUBREDDIT_NAME).modmail.create(subject=subject, body=body, recipient=recipient)
+        reddit.subreddit(SUBREDDIT_NAME).modmail.create(subject=subject, body=body, recipient=recipient).archive()
         log_action(f'Sent modmail to {recipient}: {subject}')
     except Exception as e:
         log_action(f'Failed to send modmail to {recipient}: {e}')
