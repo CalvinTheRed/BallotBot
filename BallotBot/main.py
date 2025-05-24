@@ -27,7 +27,7 @@ def load_user_data():
         with open(USER_CACHE_FILE, 'r') as f:
             return json.load(f)
     except Exception as e:
-        log_action(f'Error loading user cache: {e}')
+        log_action(f'Error loading user cache: {e}', print_to_screen=True)
         return {'whitelist': [], 'blacklist': [], 'votes': {}}
 
 def save_user_data(data):
@@ -35,21 +35,22 @@ def save_user_data(data):
         with open(USER_CACHE_FILE, 'w') as f:
             json.dump(data, f, indent=2)
     except Exception as e:
-        log_action(f'Error saving user cache: {e}')
+        log_action(f'Error saving user cache: {e}', print_to_screen=True)
 
-def log_action(message):
+def log_action(message, print_to_screen=False):
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     formatted_message = f'[{timestamp}] {message}\n'
     with open(LOG_FILE, 'a') as f:
         f.write(formatted_message)
-        print(formatted_message)
+        if (print_to_screen):
+            print(formatted_message)
 
 def send_modmail(recipient, subject, body):
     try:
         reddit.subreddit(SUBREDDIT_NAME).modmail.create(subject=subject, body=body, recipient=recipient).archive()
         log_action(f'Sent modmail to {recipient}: {subject}')
     except Exception as e:
-        log_action(f'Failed to send modmail to {recipient}: {e}')
+        log_action(f'Failed to send modmail to {recipient}: {e}', print_to_screen=True)
 
 def get_latest_post_by_flair(flair):
     return next(subreddit.search(f'flair:"{flair}"', sort='new', limit=1), None)
@@ -89,7 +90,7 @@ def has_prior_activity(author):
                     log_action(f'User {name} added to whitelist via post history.')
                     return True
         except Exception as e:
-            log_action(f'Error checking prior activity for {name}: {e}')
+            log_action(f'Error checking prior activity for {name}: {e}', print_to_screen=True)
 
         # Blacklist user if not active
         data['blacklist'].append(name)
@@ -136,7 +137,7 @@ def monitor_comments(post):
                             f'Thanks for voting! Your response ({content}) has been recorded. You may change your response at any time before the vote ends by re-commenting with your new response.'
                         )
         except Exception as e:
-            log_action(f'Encountered an error: {e}')
+            log_action(f'Encountered an error: {e}', print_to_screen=True)
 
 def monitor_terminal():
     # Check terminal for commands
@@ -150,10 +151,10 @@ def monitor_terminal():
                     data = load_user_data()
                     if username not in data['whitelist']:
                         data['whitelist'].append(username)
-                        log_action(f'User {username} added to whitelist via terminal.')
+                        log_action(f'User {username} added to whitelist via terminal.', print_to_screen=True)
                     if username in data['blacklist']:
                         data['blacklist'].remove(username)
-                        log_action(f'User {username} removed from blacklist.')
+                        log_action(f'User {username} removed from blacklist.', print_to_screen=True)
                     save_user_data(data)
                     send_modmail(
                         username,
@@ -165,7 +166,7 @@ def monitor_terminal():
                 print('Closing script')
                 os._exit(0)
         except Exception as e:
-            log_action(f'Error processing terminal command: {e}')
+            log_action(f'Error processing terminal command: {e}', print_to_screen=True)
 
 def main():
     threading.Thread(target=monitor_terminal, daemon=True).start()
