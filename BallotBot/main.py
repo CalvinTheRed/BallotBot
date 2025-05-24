@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 REDDIT_SITE_NAME = 'ballot_bot'
 SUBREDDIT_NAME = 'dndhomebrew'
-FLAIR_TEXT = 'official'
+FLAIR_TEXT = 'Official'
 VALID_VOTES = {'yes', 'no'}
 CUTOFF_DATE = datetime(2025, 4, 20, tzinfo=timezone.utc)
 ACTIVITY_DEPTH_CHECK = 100
@@ -109,9 +109,9 @@ def monitor_comments(post):
                     comment.mod.remove()
                     log_action(f'Removed comment by {username}: not a known user.')
                     send_modmail(
+                        username,
                         'Your Vote Was Removed',
-                        f"Your comment was removed because your account hasn't participated in r/DnDHomebrew prior to April 20, 2025. If this is a mistake, please [message the moderators](https://www.reddit.com/message/compose?to=/r/{SUBREDDIT_NAME}) with a link to a post or comment you made in the subreddit before the cutoff date.",
-                        username
+                        f"Your comment was removed because your account hasn't participated in r/DnDHomebrew prior to April 20, 2025. If this is a mistake, please [message the moderators](https://www.reddit.com/message/compose?to=/r/{SUBREDDIT_NAME}) with a link to a post or comment you made in the subreddit before the cutoff date."
                     )
                 elif content not in VALID_VOTES:
                     # Comments made that are not votes will be removed and not recorded
@@ -157,13 +157,13 @@ def monitor_terminal():
                     save_user_data(data)
                     send_modmail(
                         username,
-                        'User added to whitelist',
+                        'User Added to Whitelist',
                         f'You have been added to the whitelist for the community vote! Thank you for your patience. Comment on the post again to cast your vote.'
                     )
             # exit
             elif cmd == 'exit':
                 print('Closing script')
-                os._exit()
+                os._exit(0)
         except Exception as e:
             log_action(f'Error processing terminal command: {e}')
 
